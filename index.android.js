@@ -10,6 +10,14 @@ import {
 import NativeToastAndroid from './NativeToastAndroid';
 
 export default class reactNativeAndroidWearDemo extends Component {
+  componentDidMount() {
+    NativeToastAndroid.registerLoggingCallback(() => {
+      console.log('error');
+    }, (message) => {
+      console.log(`Message: "${message}"`);
+    });
+  }
+
   onPress() {
     NativeToastAndroid.show('This is a native toast!', NativeToastAndroid.SHORT);
   }

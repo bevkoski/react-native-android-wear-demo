@@ -41,7 +41,10 @@ public class MainActivity extends WearableActivity
     btnIncreaseCounter = (Button) findViewById(R.id.btnWearIncreaseCounter);
     tvMessage = (TextView) findViewById(R.id.tvMessage);
 
-    client = new GoogleApiClient.Builder(this).addConnectionCallbacks(this).addOnConnectionFailedListener(this).build();
+    client = new GoogleApiClient.Builder(this).addApi(Wearable.API)
+      .addConnectionCallbacks(this)
+      .addOnConnectionFailedListener(this)
+      .build();
 
     btnIncreaseCounter.setOnClickListener(clickListener);
   }
@@ -52,7 +55,7 @@ public class MainActivity extends WearableActivity
       AsyncTask.execute(new Runnable() {
         @Override
         public void run() {
-          Wearable.MessageApi.sendMessage(client, node, "/counter", Integer.toString(currentCount).getBytes());
+          Wearable.MessageApi.sendMessage(client, node, "/counter", Integer.toString(currentCount++).getBytes());
           // FIXME: 17.03.2017 transform counter directly to byte array using ByteBuffer
         }
       });

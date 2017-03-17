@@ -77,7 +77,7 @@ public class ToastModule extends ReactContextBaseJavaModule
   @Override
   public void onMessageReceived(MessageEvent messageEvent) {
     if (messageEvent.getPath().equals("/counter")) {
-      loggingCallback.invoke(new String(messageEvent.getData(), Charset.defaultCharset()));
+      show(new String(messageEvent.getData(), Charset.defaultCharset()), Toast.LENGTH_SHORT);
     }
   }
 

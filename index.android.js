@@ -22,12 +22,20 @@ export default class reactNativeAndroidWearDemo extends Component {
     NativeToastAndroid.show('This is a native toast!', NativeToastAndroid.SHORT);
   }
 
+  sendMessageToWear() {
+  	NativeToastAndroid.sendMessageToWear("ASI team!!!")
+  }
+
   render() {
     return (
       <View style={styles.container}>
         <Button
           onPress={this.onPress}
           title="Display Native Toast"
+        />
+        <Button
+          onPress={this.sendMessageToWear}
+          title="Who runs the world?"
         />
       </View>
     );

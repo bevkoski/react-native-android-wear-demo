@@ -42,8 +42,8 @@ Try executing `adb reverse tcp:8081 tcp:8081` from the command line and reloadin
 #### Run the watch app
 
 1. Connect your Android watch via USB
-2. Select the `watch` module as a run configuration
-3. Run the `watch` module
+2. Select the `wear` module as a run configuration
+3. Run the `wear` module
 4. Select your watch from the available connected devices
 
 ## How it works

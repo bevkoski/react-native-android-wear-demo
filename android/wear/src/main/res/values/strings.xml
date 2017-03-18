@@ -1,5 +1,5 @@
 <resources>
   <string name="app_name">ReactNativeCounter</string>
   <string name="increase_phone_counter">Increase phone counter</string>
-  <string name="current_count">Counter on watch:</string>
+  <string name="current_count">Counter on wearable:</string>
 </resources>

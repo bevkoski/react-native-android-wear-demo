@@ -50,7 +50,7 @@ public class WearCommunicationModule extends ReactContextBaseJavaModule
 
   /** Increase the wear counter on every node that is connected to this device. */
   @ReactMethod
-  public void increaseWatchCounter() {
+  public void increaseWearCounter() {
     final List<Node> nodes = Wearable.NodeApi.getConnectedNodes(googleApiClient).await().getNodes();
     if (nodes.size() > 0) {
       for (Node node : nodes) {

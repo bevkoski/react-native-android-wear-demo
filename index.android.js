@@ -32,8 +32,8 @@ export default class reactNativeAndroidWearDemo extends Component {
     });
   };
 
-  increaseWatchCounter = () => {
-    NativeModules.AndroidWearCommunication.increaseWatchCounter();
+  increaseWearCounter = () => {
+    NativeModules.AndroidWearCommunication.increaseWearCounter();
   };
 
   render() {
@@ -43,8 +43,8 @@ export default class reactNativeAndroidWearDemo extends Component {
         <Text style={styles.counter}>{this.state.counter}</Text>
         <View style={styles.buttonContainer}>
           <Button
-            title="Increase Watch Counter"
-            onPress={this.increaseWatchCounter}
+            title="Increase Wear Counter"
+            onPress={this.increaseWearCounter}
             style={styles.button}
           />
         </View>

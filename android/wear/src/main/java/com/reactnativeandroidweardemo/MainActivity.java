@@ -5,7 +5,6 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.wearable.activity.WearableActivity;
-import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -18,7 +17,6 @@ import com.google.android.gms.wearable.MessageEvent;
 import com.google.android.gms.wearable.Node;
 import com.google.android.gms.wearable.Wearable;
 
-import java.nio.charset.Charset;
 import java.util.List;
 
 public class MainActivity extends WearableActivity
@@ -26,8 +24,13 @@ public class MainActivity extends WearableActivity
   MessageApi.MessageListener {
   private static final String LOG_TAG = MainActivity.class.getSimpleName();
 
-  private int currentCount = 0;
+  /** Counter that stores the current count of the wear module. */
+  private int count = 0;
 
+  /**
+   * Button used to increase counter on the mobile module. The status of this button is handled by the result of {@link
+   * MainActivity#initNodesTask}.
+   */
   private Button btnIncreaseCounter;
   private TextView tvMessage;
 
@@ -40,6 +43,7 @@ public class MainActivity extends WearableActivity
     setContentView(R.layout.activity_main);
     btnIncreaseCounter = (Button) findViewById(R.id.btnWearIncreaseCounter);
     tvMessage = (TextView) findViewById(R.id.tvMessage);
+    tvMessage.setText(Integer.toString(count));
 
     client = new GoogleApiClient.Builder(this).addApi(Wearable.API)
       .addConnectionCallbacks(this)
@@ -52,13 +56,8 @@ public class MainActivity extends WearableActivity
   private final View.OnClickListener clickListener = new View.OnClickListener() {
     @Override
     public void onClick(View v) {
-      AsyncTask.execute(new Runnable() {
-        @Override
-        public void run() {
-          Wearable.MessageApi.sendMessage(client, node, "/counter", Integer.toString(currentCount++).getBytes());
-          // FIXME: 17.03.2017 transform counter directly to byte array using ByteBuffer
-        }
-      });
+      // Send a message to the found node to increase its counter
+      Wearable.MessageApi.sendMessage(client, node, "/increase_phone_counter", new byte[0]);
     }
   };
 
@@ -66,26 +65,49 @@ public class MainActivity extends WearableActivity
   public void onConnected(@Nullable Bundle bundle) {
     Log.d(LOG_TAG, "onConnected: GoogleApiClient successfully connected.");
     Wearable.MessageApi.addListener(client, this);
-    AsyncTask.execute(new Runnable() {
-      @Override
-      public void run() {
-        final List<Node> connectedNodes = Wearable.NodeApi.getConnectedNodes(client).await().getNodes();
-        for (Node connectedNode : connectedNodes) {
-          if (connectedNode.isNearby()) {
-            node = connectedNode.getId();
-            btnIncreaseCounter.setEnabled(true);
-            break;
-          }
-        }
-        if (TextUtils.isEmpty(node)) {
-          Log.e(LOG_TAG, "Failed to connect to a nearby node");
-        }
-      }
-    });
+    initNodesTask.execute(client);
   }
 
-  private void decomposeGoogleApiClient() {
+  /**
+   * This async task will get all the connected nodes and get the first one that is nearby. Further we will communicate
+   * only to that node. Additionally it will enable/disable the {@link MainActivity#btnIncreaseCounter} based on the
+   * result.
+   */
+  private final AsyncTask<GoogleApiClient, Void, String> initNodesTask
+    = new AsyncTask<GoogleApiClient, Void, String>() {
+    @Override
+    protected String doInBackground(GoogleApiClient... params) {
+      final List<Node> connectedNodes = Wearable.NodeApi.getConnectedNodes(client).await().getNodes();
+      for (Node connectedNode : connectedNodes) {
+        if (connectedNode.isNearby()) {
+          return connectedNode.getId();
+        }
+      }
+      return null;
+    }
+
+    @Override
+    protected void onPostExecute(String resultNode) {
+      super.onPostExecute(resultNode);
+      node = resultNode;
+      btnIncreaseCounter.setEnabled(resultNode != null);
+    }
+  };
+
+  @Override
+  public void onMessageReceived(MessageEvent messageEvent) {
+    if (messageEvent.getPath().equals("/increase_wear_counter")) {
+      tvMessage.setText(Integer.toString(count++));
+    }
+  }
+
+  /**
+   * Used to disconnect the {@link MainActivity#client} and reset the other fields like the
+   * {@link MainActivity#node} and disable the {@link MainActivity#btnIncreaseCounter}.
+   */
+  private void disconnectGoogleApiClient() {
     if (client != null && client.isConnected()) {
+      Wearable.MessageApi.removeListener(client, this);
       client.disconnect();
     }
     btnIncreaseCounter.setEnabled(false);
@@ -100,26 +122,19 @@ public class MainActivity extends WearableActivity
 
   @Override
   protected void onStop() {
-    decomposeGoogleApiClient();
+    disconnectGoogleApiClient();
     super.onStop();
   }
 
   @Override
   public void onConnectionSuspended(int i) {
     Log.e(LOG_TAG, "onConnectionSuspended: " + (i == CAUSE_NETWORK_LOST ? "NETWORK LOST" : "SERVICE_DISCONNECTED"));
-    decomposeGoogleApiClient();
+    disconnectGoogleApiClient();
   }
 
   @Override
   public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
     Log.e(LOG_TAG, "Connection to GoogleApiClient failed." + connectionResult.getErrorMessage());
-    decomposeGoogleApiClient();
-  }
-
-  @Override
-  public void onMessageReceived(MessageEvent messageEvent) {
-    if (messageEvent.getPath().equals("/react_native_message")) {
-      tvMessage.setText(new String(messageEvent.getData(), Charset.defaultCharset()));
-    }
+    disconnectGoogleApiClient();
   }
 }

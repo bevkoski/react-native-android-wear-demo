@@ -15,15 +15,24 @@
     android:orientation="vertical">
 
     <TextView
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:text="@string/current_count"/>
+
+    <TextView
       android:id="@+id/tvMessage"
       android:layout_width="wrap_content"
       android:layout_height="wrap_content"
+      android:textColor="@color/black"
+      android:textSize="40sp"
       tools:text="0"/>
 
     <Button
       android:id="@+id/btnWearIncreaseCounter"
       android:layout_width="wrap_content"
       android:layout_height="wrap_content"
-      android:text="@string/increase_counter"/>
+      android:text="@string/increase_phone_counter"
+      android:enabled="false"
+      tools:enabled="true"/>
   </LinearLayout>
 </android.support.wearable.view.BoxInsetLayout>

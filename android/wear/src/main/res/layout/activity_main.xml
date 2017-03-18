@@ -24,15 +24,16 @@
       android:layout_width="wrap_content"
       android:layout_height="wrap_content"
       android:textColor="@color/black"
-      android:textSize="40sp"
+      android:textSize="60sp"
       tools:text="0"/>
 
     <Button
       android:id="@+id/btnWearIncreaseCounter"
       android:layout_width="wrap_content"
       android:layout_height="wrap_content"
-      android:text="@string/increase_phone_counter"
       android:enabled="false"
+      android:text="@string/increase_phone_counter"
+      android:textColor="@color/white"
       tools:enabled="true"/>
   </LinearLayout>
 </android.support.wearable.view.BoxInsetLayout>

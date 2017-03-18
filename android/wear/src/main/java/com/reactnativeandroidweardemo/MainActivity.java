@@ -1,5 +1,6 @@
 package com.reactnativeandroidweardemo;
 
+import android.graphics.PorterDuff;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -42,6 +43,7 @@ public class MainActivity extends WearableActivity
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
     btnIncreaseCounter = (Button) findViewById(R.id.btnWearIncreaseCounter);
+    btnIncreaseCounter.getBackground().setColorFilter(0xFF1194F7, PorterDuff.Mode.MULTIPLY);
     tvMessage = (TextView) findViewById(R.id.tvMessage);
     tvMessage.setText(Integer.toString(count));
 

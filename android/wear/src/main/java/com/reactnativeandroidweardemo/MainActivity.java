@@ -13,17 +13,23 @@ import android.widget.TextView;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.wearable.CapabilityApi;
+import com.google.android.gms.wearable.CapabilityInfo;
 import com.google.android.gms.wearable.MessageApi;
 import com.google.android.gms.wearable.MessageEvent;
 import com.google.android.gms.wearable.Node;
 import com.google.android.gms.wearable.Wearable;
 
+import java.util.Collection;
 import java.util.List;
 
 public class MainActivity extends WearableActivity
   implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener,
   MessageApi.MessageListener {
   private static final String LOG_TAG = MainActivity.class.getSimpleName();
+  private static final String PHONE_COUNTER_CAPABILITY = "phone_counter_capability";
+  private final static String WEAR_COUNTER_CAPABILITY = "wear_counter_capability";
+
 
   /** Counter that stores the current count of the wear module. */
   private int count = 0;
@@ -33,6 +39,7 @@ public class MainActivity extends WearableActivity
    * MainActivity.InitNodesTask}.
    */
   private Button btnIncreaseCounter;
+  private Button btnLaunchPhoneApp;
   private TextView tvCounter;
 
   private GoogleApiClient client = null;
@@ -46,6 +53,7 @@ public class MainActivity extends WearableActivity
     btnIncreaseCounter.getBackground().setColorFilter(0xFF1194F7, PorterDuff.Mode.MULTIPLY);
     tvCounter = (TextView) findViewById(R.id.tvCounter);
     tvCounter.setText(Integer.toString(count));
+    btnLaunchPhoneApp = (Button) findViewById(R.id.btnWearLaunchPhoneApp);
 
     client = new GoogleApiClient.Builder(this).addApi(Wearable.API)
       .addConnectionCallbacks(this)
@@ -53,13 +61,19 @@ public class MainActivity extends WearableActivity
       .build();
 
     btnIncreaseCounter.setOnClickListener(clickListener);
+    btnLaunchPhoneApp.setOnClickListener(clickListener);
   }
 
   private final View.OnClickListener clickListener = new View.OnClickListener() {
     @Override
     public void onClick(View v) {
-      // Send a message to the found node to increase its counter
-      Wearable.MessageApi.sendMessage(client, node, "/increase_phone_counter", null);
+      if (v == btnIncreaseCounter) {
+        // Send a message to the found node to increase its counter
+        Wearable.MessageApi.sendMessage(client, node, "/increase_phone_counter", null);
+      } else if (v == btnLaunchPhoneApp) {
+        // Try to launch the phone app
+        new LaunchAppTask().execute(client);
+      }
     }
   };
 
@@ -67,18 +81,34 @@ public class MainActivity extends WearableActivity
   public void onConnected(@Nullable Bundle bundle) {
     Log.d(LOG_TAG, "onConnected: GoogleApiClient successfully connected.");
     Wearable.MessageApi.addListener(client, this);
+    Wearable.CapabilityApi.addLocalCapability(client, WEAR_COUNTER_CAPABILITY);
+    Wearable.CapabilityApi.addCapabilityListener(client, capabilityListener, PHONE_COUNTER_CAPABILITY);
     new InitNodesTask().execute(client);
   }
 
+  private final CapabilityApi.CapabilityListener capabilityListener = new CapabilityApi.CapabilityListener() {
+    @Override
+    public void onCapabilityChanged(CapabilityInfo capabilityInfo) {
+      final Collection<Node> capableNodes = capabilityInfo.getNodes();
+      if (capableNodes.isEmpty()) {
+        enablePhoneAppLaunchControls();
+      } else {
+        // Enable the phone counter with the first node in the capableNodes set
+        enableCountControls(capableNodes.iterator().next().getId());
+      }
+    }
+  };
+
   /**
-   * This async task will get all the connected nodes and get the first one that is nearby. Further we will communicate
-   * only to that node. Additionally it will enable/disable the {@link MainActivity#btnIncreaseCounter} based on the
-   * result.
+   * This async task will get all the nodes that advertise {@link MainActivity#PHONE_COUNTER_CAPABILITY} and get the
+   * first one that is nearby. Further we will communicate only to that node. Additionally will call the appropriate
+   * method to {@link MainActivity#enableCountControls(String)} or {@link MainActivity#enablePhoneAppLaunchControls()}.
    */
   private class InitNodesTask extends AsyncTask<GoogleApiClient, Void, String> {
     @Override
     protected String doInBackground(GoogleApiClient... params) {
-      final List<Node> connectedNodes = Wearable.NodeApi.getConnectedNodes(client).await().getNodes();
+      final Collection<Node> connectedNodes = Wearable.CapabilityApi.getCapability(params[0], PHONE_COUNTER_CAPABILITY,
+        CapabilityApi.FILTER_REACHABLE).await().getCapability().getNodes();
       for (Node connectedNode : connectedNodes) {
         if (connectedNode.isNearby()) {
           return connectedNode.getId();
@@ -90,10 +120,44 @@ public class MainActivity extends WearableActivity
     @Override
     protected void onPostExecute(String resultNode) {
       super.onPostExecute(resultNode);
-      node = resultNode;
       // Because this runs on the main thread it is safe to change the state of the UI.
-      btnIncreaseCounter.setEnabled(resultNode != null);
+      if (resultNode != null) {
+        enableCountControls(resultNode);
+      } else {
+        enablePhoneAppLaunchControls();
+      }
     }
+  }
+
+  private class LaunchAppTask extends AsyncTask<GoogleApiClient, Void, List<Node>> {
+    @Override
+    protected List<Node> doInBackground(GoogleApiClient... params) {
+      return Wearable.NodeApi.getConnectedNodes(params[0]).await().getNodes();
+    }
+
+    @Override
+    protected void onPostExecute(List<Node> nodes) {
+      for (Node connectedNode : nodes) {
+        if (connectedNode.isNearby()) {
+          Wearable.MessageApi.sendMessage(client, connectedNode.getId(), "/launch_phone_app", new byte[0]);
+        }
+      }
+      super.onPostExecute(nodes);
+    }
+  }
+
+  /** Enables the controls that will be used to increment the counter on the phone. */
+  private void enableCountControls(@NonNull String nodeId) {
+    node = nodeId;
+    btnIncreaseCounter.setVisibility(View.VISIBLE);
+    btnLaunchPhoneApp.setVisibility(View.GONE);
+  }
+
+  /** Enables the controls that will be used to launch the counting app on the phone. */
+  private void enablePhoneAppLaunchControls() {
+    node = null;
+    btnIncreaseCounter.setVisibility(View.GONE);
+    btnLaunchPhoneApp.setVisibility(View.VISIBLE);
   }
 
   @Override
@@ -109,10 +173,10 @@ public class MainActivity extends WearableActivity
    */
   private void disconnectGoogleApiClient() {
     if (client != null && client.isConnected()) {
+      Wearable.CapabilityApi.removeLocalCapability(client, WEAR_COUNTER_CAPABILITY);
       Wearable.MessageApi.removeListener(client, this);
       client.disconnect();
     }
-    btnIncreaseCounter.setEnabled(false);
     node = null;
   }
 

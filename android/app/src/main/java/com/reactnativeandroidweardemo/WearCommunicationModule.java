@@ -12,17 +12,24 @@ import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.wearable.CapabilityApi;
+import com.google.android.gms.wearable.CapabilityInfo;
 import com.google.android.gms.wearable.MessageApi;
 import com.google.android.gms.wearable.MessageEvent;
 import com.google.android.gms.wearable.Node;
 import com.google.android.gms.wearable.Wearable;
 
+import java.util.Collection;
 import java.util.List;
 
 public class WearCommunicationModule extends ReactContextBaseJavaModule
-  implements GoogleApiClient.ConnectionCallbacks, MessageApi.MessageListener, LifecycleEventListener {
+  implements GoogleApiClient.ConnectionCallbacks, MessageApi.MessageListener, LifecycleEventListener,
+  CapabilityApi.CapabilityListener {
+  private final static String PHONE_COUNTER_CAPABILITY = "phone_counter_capability";
+  private final static String WEAR_COUNTER_CAPABILITY = "wear_counter_capability";
 
   private final GoogleApiClient googleApiClient;
+  private String capableNode = null;
 
   public WearCommunicationModule(ReactApplicationContext reactContext) {
     super(reactContext);
@@ -40,6 +47,12 @@ public class WearCommunicationModule extends ReactContextBaseJavaModule
   @Override
   public void onConnected(@Nullable Bundle bundle) {
     Wearable.MessageApi.addListener(googleApiClient, this);
+    Wearable.CapabilityApi.addCapabilityListener(googleApiClient, this, WEAR_COUNTER_CAPABILITY);
+    Wearable.CapabilityApi.addLocalCapability(googleApiClient, PHONE_COUNTER_CAPABILITY);
+
+    final Collection<Node> capableNodes = Wearable.CapabilityApi.getCapability(googleApiClient, WEAR_COUNTER_CAPABILITY,
+      CapabilityApi.FILTER_REACHABLE).await().getCapability().getNodes();
+    handleCapableNodes(capableNodes);
   }
 
   @Override
@@ -61,10 +74,32 @@ public class WearCommunicationModule extends ReactContextBaseJavaModule
     }
   }
 
+  @ReactMethod
+  public void launchWearApp() {
+    final List<Node> connectedNodes = Wearable.NodeApi.getConnectedNodes(googleApiClient).await().getNodes();
+    for (Node connectedNode : connectedNodes) {
+      Wearable.MessageApi.sendMessage(googleApiClient, connectedNode.getId(), "/launch_wear_app", null);
+    }
+  }
+
   @Override
   public void onMessageReceived(MessageEvent messageEvent) {
     if (messageEvent.getPath().equals("/increase_phone_counter")) {
       sendEvent(getReactApplicationContext(), "increaseCounter", null);
+    }
+  }
+
+  @Override
+  public void onCapabilityChanged(CapabilityInfo capabilityInfo) {
+    handleCapableNodes(capabilityInfo.getNodes());
+  }
+
+  private void handleCapableNodes(Collection<Node> capableNodes) {
+    if (capableNodes.isEmpty()) {
+      sendEvent(getReactApplicationContext(), "enableWearAppLaunchControls", null);
+    } else {
+      sendEvent(getReactApplicationContext(), "enableCountControls", null);
+      capableNode = capableNodes.iterator().next().getId();
     }
   }
 
@@ -80,6 +115,7 @@ public class WearCommunicationModule extends ReactContextBaseJavaModule
   @Override
   public void onHostDestroy() {
     Wearable.MessageApi.removeListener(googleApiClient, this);
+    Wearable.CapabilityApi.removeLocalCapability(googleApiClient, PHONE_COUNTER_CAPABILITY);
     googleApiClient.disconnect();
   }
 

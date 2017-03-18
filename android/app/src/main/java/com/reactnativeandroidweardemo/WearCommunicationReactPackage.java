@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class ToastReactPackage implements ReactPackage {
+public class WearCommunicationReactPackage implements ReactPackage {
 
     @Override
     public List<Class<? extends JavaScriptModule>> createJSModules() {
@@ -26,9 +26,7 @@ public class ToastReactPackage implements ReactPackage {
     public List<NativeModule> createNativeModules(
             ReactApplicationContext reactContext) {
         List<NativeModule> modules = new ArrayList<>();
-
-        modules.add(new ToastModule(reactContext));
-
+        modules.add(new WearCommunicationModule(reactContext));
         return modules;
     }
 

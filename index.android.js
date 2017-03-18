@@ -3,43 +3,54 @@
 import React, { Component } from 'react';
 import {
   AppRegistry,
-  StyleSheet,
+  NativeModules,
+  DeviceEventEmitter,
+  View,
   Button,
-  View
+  Text,
+  StyleSheet
 } from 'react-native';
-import NativeToastAndroid from './NativeToastAndroid';
+
+const INCREASE_COUNTER_EVENT = 'increaseCounter';
 
 export default class reactNativeAndroidWearDemo extends Component {
-  componentDidMount() {
-    NativeToastAndroid.registerLoggingCallback(() => {
-      console.log('error');
-    }, (message) => {
-      console.log(`Message: "${message}"`);
+  constructor(props) {
+    super(props);
+    this.state = {
+      counter: 0
+    };
+  };
+
+  componentWillMount() {
+    DeviceEventEmitter.addListener(INCREASE_COUNTER_EVENT, this.increaseLocalCounter);
+  };
+
+  increaseLocalCounter = () => {
+    const currentValue = this.state.counter;
+    this.setState({
+      counter: currentValue + 1
     });
-  }
+  };
 
-  onPress() {
-    NativeToastAndroid.show('This is a native toast!', NativeToastAndroid.SHORT);
-  }
-
-  sendMessageToWear() {
-  	NativeToastAndroid.sendMessageToWear("ASI team!!!")
-  }
+  increaseWatchCounter = () => {
+    NativeModules.AndroidWearCommunication.increaseWatchCounter();
+  };
 
   render() {
     return (
       <View style={styles.container}>
-        <Button
-          onPress={this.onPress}
-          title="Display Native Toast"
-        />
-        <Button
-          onPress={this.sendMessageToWear}
-          title="Who runs the world?"
-        />
+        <Text>Current count:</Text>
+        <Text style={styles.counter}>{this.state.counter}</Text>
+        <View style={styles.buttonContainer}>
+          <Button
+            title="Increase Watch Counter"
+            onPress={this.increaseWatchCounter}
+            style={styles.button}
+          />
+        </View>
       </View>
     );
-  }
+  };
 }
 
 const styles = StyleSheet.create({
@@ -47,7 +58,20 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5FCFF',
+    backgroundColor: '#F5FCFF'
+  },
+  label: {
+    fontSize: 60,
+  },
+  counter: {
+    fontSize: 140,
+    color: 'black'
+  },
+  buttonContainer: {
+    padding: 35
+  },
+  button: {
+    fontSize: 90
   }
 });
 

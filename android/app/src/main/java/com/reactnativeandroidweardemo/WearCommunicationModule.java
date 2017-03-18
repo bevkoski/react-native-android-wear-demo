@@ -1,5 +1,6 @@
 package com.reactnativeandroidweardemo;
 
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.widget.Toast;
@@ -54,14 +55,32 @@ public class WearCommunicationModule extends ReactContextBaseJavaModule
     Wearable.CapabilityApi.addLocalCapability(googleApiClient, PHONE_COUNTER_CAPABILITY);
 
     // Get capable node that is already on the network with advertised WEAR_COUNTER_CAPABILITY.
-    final Collection<Node> capableNodes = Wearable.CapabilityApi.getCapability(googleApiClient, WEAR_COUNTER_CAPABILITY,
-      CapabilityApi.FILTER_REACHABLE).await().getCapability().getNodes();
-    handleCapableNodes(capableNodes);
+    new InitNodesTask().execute(googleApiClient);
   }
 
   @Override
   public void onConnectionSuspended(int i) {
     Wearable.MessageApi.removeListener(googleApiClient, this);
+  }
+
+  /**
+   * This async task will get all the nodes that advertise {@link WearCommunicationModule#WEAR_COUNTER_CAPABILITY} and
+   * get the first one that is nearby. Further we will communicate only to that node. Additionally will call the {@link
+   * WearCommunicationModule#handleCapableNodes(Collection)}
+   */
+  private class InitNodesTask extends AsyncTask<GoogleApiClient, Void, CapabilityInfo> {
+    @Override
+    protected CapabilityInfo doInBackground(GoogleApiClient... params) {
+      return Wearable.CapabilityApi.getCapability(params[0], PHONE_COUNTER_CAPABILITY, CapabilityApi.FILTER_REACHABLE)
+        .await()
+        .getCapability();
+    }
+
+    @Override
+    protected void onPostExecute(CapabilityInfo capabilityInfo) {
+      super.onPostExecute(capabilityInfo);
+      handleCapableNodes(capabilityInfo.getNodes());
+    }
   }
 
 

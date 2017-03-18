@@ -39,7 +39,7 @@ export default class reactNativeAndroidWearDemo extends Component {
   render() {
     return (
       <View style={styles.container}>
-        <Text>Current count:</Text>
+        <Text>Counter on phone:</Text>
         <Text style={styles.counter}>{this.state.counter}</Text>
         <View style={styles.buttonContainer}>
           <Button

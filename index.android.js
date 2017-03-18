@@ -25,6 +25,10 @@ export default class reactNativeAndroidWearDemo extends Component {
     DeviceEventEmitter.addListener(INCREASE_COUNTER_EVENT, this.increaseLocalCounter);
   };
 
+  componentWillUnmount() {
+    DeviceEventEmitter.removeListener(INCREASE_COUNTER_EVENT, this.increaseLocalCounter);
+  };
+
   increaseLocalCounter = () => {
     const currentValue = this.state.counter;
     this.setState({

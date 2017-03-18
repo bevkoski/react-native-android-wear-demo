@@ -33,7 +33,7 @@ public class MainActivity extends WearableActivity
    * MainActivity.InitNodesTask}.
    */
   private Button btnIncreaseCounter;
-  private TextView tvMessage;
+  private TextView tvCounter;
 
   private GoogleApiClient client = null;
   private String node = null;
@@ -44,8 +44,8 @@ public class MainActivity extends WearableActivity
     setContentView(R.layout.activity_main);
     btnIncreaseCounter = (Button) findViewById(R.id.btnWearIncreaseCounter);
     btnIncreaseCounter.getBackground().setColorFilter(0xFF1194F7, PorterDuff.Mode.MULTIPLY);
-    tvMessage = (TextView) findViewById(R.id.tvMessage);
-    tvMessage.setText(Integer.toString(count));
+    tvCounter = (TextView) findViewById(R.id.tvCounter);
+    tvCounter.setText(Integer.toString(count));
 
     client = new GoogleApiClient.Builder(this).addApi(Wearable.API)
       .addConnectionCallbacks(this)
@@ -59,7 +59,7 @@ public class MainActivity extends WearableActivity
     @Override
     public void onClick(View v) {
       // Send a message to the found node to increase its counter
-      Wearable.MessageApi.sendMessage(client, node, "/increase_phone_counter", new byte[0]);
+      Wearable.MessageApi.sendMessage(client, node, "/increase_phone_counter", null);
     }
   };
 
@@ -99,7 +99,7 @@ public class MainActivity extends WearableActivity
   @Override
   public void onMessageReceived(MessageEvent messageEvent) {
     if (messageEvent.getPath().equals("/increase_wear_counter")) {
-      tvMessage.setText(Integer.toString(++count));
+      tvCounter.setText(Integer.toString(++count));
     }
   }
 

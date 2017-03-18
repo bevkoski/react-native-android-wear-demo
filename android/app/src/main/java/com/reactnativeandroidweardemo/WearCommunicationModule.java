@@ -2,7 +2,9 @@ package com.reactnativeandroidweardemo;
 
 import android.os.Bundle;
 import android.support.annotation.Nullable;
+import android.widget.Toast;
 
+import com.facebook.react.bridge.LifecycleEventListener;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
@@ -18,16 +20,20 @@ import com.google.android.gms.wearable.Wearable;
 import java.util.List;
 
 public class WearCommunicationModule extends ReactContextBaseJavaModule
-    implements GoogleApiClient.ConnectionCallbacks, MessageApi.MessageListener {
+  implements GoogleApiClient.ConnectionCallbacks, MessageApi.MessageListener, LifecycleEventListener {
 
   private final GoogleApiClient googleApiClient;
 
   public WearCommunicationModule(ReactApplicationContext reactContext) {
     super(reactContext);
-    googleApiClient = new GoogleApiClient.Builder(getReactApplicationContext())
-      .addApi(Wearable.API)
+    reactContext.addLifecycleEventListener(this);
+    googleApiClient = new GoogleApiClient.Builder(getReactApplicationContext()).addApi(Wearable.API)
       .addConnectionCallbacks(this)
       .build();
+  }
+
+  @Override
+  public void onHostResume() {
     googleApiClient.connect();
   }
 
@@ -41,16 +47,17 @@ public class WearCommunicationModule extends ReactContextBaseJavaModule
     Wearable.MessageApi.removeListener(googleApiClient, this);
   }
 
-  @Override
-  public String getName() {
-    return "AndroidWearCommunication";
-  }
 
+  /** Increase the wear counter on every node that is connected to this device. */
   @ReactMethod
   public void increaseWatchCounter() {
     final List<Node> nodes = Wearable.NodeApi.getConnectedNodes(googleApiClient).await().getNodes();
-    for (Node node : nodes) {
-      Wearable.MessageApi.sendMessage(googleApiClient, node.getId(), "/increase_wear_counter", null);
+    if (nodes.size() > 0) {
+      for (Node node : nodes) {
+        Wearable.MessageApi.sendMessage(googleApiClient, node.getId(), "/increase_wear_counter", null);
+      }
+    } else {
+      Toast.makeText(getReactApplicationContext(), "No connected nodes found", Toast.LENGTH_LONG).show();
     }
   }
 
@@ -61,12 +68,23 @@ public class WearCommunicationModule extends ReactContextBaseJavaModule
     }
   }
 
-  private void sendEvent(ReactContext reactContext,
-                         String eventName,
-                         @Nullable WritableMap params) {
-    reactContext
-      .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-      .emit(eventName, params);
+  private void sendEvent(ReactContext reactContext, String eventName, @Nullable WritableMap params) {
+    reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class).emit(eventName, params);
   }
 
+  @Override
+  public void onHostPause() {
+
+  }
+
+  @Override
+  public void onHostDestroy() {
+    Wearable.MessageApi.removeListener(googleApiClient, this);
+    googleApiClient.disconnect();
+  }
+
+  @Override
+  public String getName() {
+    return "AndroidWearCommunication";
+  }
 }

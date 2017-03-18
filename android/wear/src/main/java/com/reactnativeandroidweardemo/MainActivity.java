@@ -88,10 +88,10 @@ public class MainActivity extends WearableActivity
     }
 
     @Override
-    /** Because this runs on the main thread it is safe to change the state of the UI.*/
     protected void onPostExecute(String resultNode) {
       super.onPostExecute(resultNode);
       node = resultNode;
+      // Because this runs on the main thread it is safe to change the state of the UI.
       btnIncreaseCounter.setEnabled(resultNode != null);
     }
   }

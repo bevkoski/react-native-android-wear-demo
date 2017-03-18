@@ -74,7 +74,30 @@ public void increaseWearCounter() {
 }
 ```
 
+The watch app overrides the `onMessageReceived` method and when an `/increase_wear_counter` message is received, it updates the `tvCounter` TextView.
+
+```java
+@Override
+public void onMessageReceived(MessageEvent messageEvent) {
+  if (messageEvent.getPath().equals("/increase_wear_counter")) {
+    tvCounter.setText(Integer.toString(++count));
+  }
+}
+```
+
 ### Android Wear to React Native communication
+
+An increase of the counter located on the phone is triggered via the button displayed in the watch app. When tapped, it sends an `/increase_phone_counter` message using the [MessageAPI](https://developers.google.com/android/reference/com/google/android/gms/wearable/MessageApi).
+
+```
+private final View.OnClickListener clickListener = new View.OnClickListener() {
+  @Override
+  public void onClick(View v) {
+    // Send a message to the found node to increase its counter
+    Wearable.MessageApi.sendMessage(client, node, "/increase_phone_counter", null);
+  }
+};
+```
 
 The native module overrides the `onMessageReceived` method and when an `/increase_phone_counter` message is received, it emits an `increaseCounter` event to the JavaScript thread.
 

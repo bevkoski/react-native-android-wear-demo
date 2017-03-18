@@ -81,11 +81,15 @@ public class MainActivity extends WearableActivity
   public void onConnected(@Nullable Bundle bundle) {
     Log.d(LOG_TAG, "onConnected: GoogleApiClient successfully connected.");
     Wearable.MessageApi.addListener(client, this);
+    // Advertise the capability to handle counter increases
     Wearable.CapabilityApi.addLocalCapability(client, WEAR_COUNTER_CAPABILITY);
+
+    // Register capability listener to know when a capable node is connected/disconnected form the network
     Wearable.CapabilityApi.addCapabilityListener(client, capabilityListener, PHONE_COUNTER_CAPABILITY);
     new InitNodesTask().execute(client);
   }
 
+  /** Handle capability node changes on the network. */
   private final CapabilityApi.CapabilityListener capabilityListener = new CapabilityApi.CapabilityListener() {
     @Override
     public void onCapabilityChanged(CapabilityInfo capabilityInfo) {
@@ -93,7 +97,7 @@ public class MainActivity extends WearableActivity
       if (capableNodes.isEmpty()) {
         enablePhoneAppLaunchControls();
       } else {
-        // Enable the phone counter with the first node in the capableNodes set
+        // Enable the phone counter with the first node in the capableNodes received from this listener
         enableCountControls(capableNodes.iterator().next().getId());
       }
     }
@@ -129,6 +133,7 @@ public class MainActivity extends WearableActivity
     }
   }
 
+  /** Async task that will send messages to every connected node to try to launch the phone application. */
   private class LaunchAppTask extends AsyncTask<GoogleApiClient, Void, List<Node>> {
     @Override
     protected List<Node> doInBackground(GoogleApiClient... params) {
@@ -139,7 +144,7 @@ public class MainActivity extends WearableActivity
     protected void onPostExecute(List<Node> nodes) {
       for (Node connectedNode : nodes) {
         if (connectedNode.isNearby()) {
-          Wearable.MessageApi.sendMessage(client, connectedNode.getId(), "/launch_phone_app", new byte[0]);
+          Wearable.MessageApi.sendMessage(client, connectedNode.getId(), "/launch_phone_app", null);
         }
       }
       super.onPostExecute(nodes);
@@ -173,6 +178,7 @@ public class MainActivity extends WearableActivity
    */
   private void disconnectGoogleApiClient() {
     if (client != null && client.isConnected()) {
+      // Remove the advertisement that this node is capable of handling counter increases
       Wearable.CapabilityApi.removeLocalCapability(client, WEAR_COUNTER_CAPABILITY);
       Wearable.MessageApi.removeListener(client, this);
       client.disconnect();

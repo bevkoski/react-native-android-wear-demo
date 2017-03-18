@@ -47,9 +47,13 @@ public class WearCommunicationModule extends ReactContextBaseJavaModule
   @Override
   public void onConnected(@Nullable Bundle bundle) {
     Wearable.MessageApi.addListener(googleApiClient, this);
+    // Listen for capability changes on the network
     Wearable.CapabilityApi.addCapabilityListener(googleApiClient, this, WEAR_COUNTER_CAPABILITY);
+
+    // Advertise the PHONE_COUNTER_CAPABILITY on the network
     Wearable.CapabilityApi.addLocalCapability(googleApiClient, PHONE_COUNTER_CAPABILITY);
 
+    // Get capable node that is already on the network with advertised WEAR_COUNTER_CAPABILITY.
     final Collection<Node> capableNodes = Wearable.CapabilityApi.getCapability(googleApiClient, WEAR_COUNTER_CAPABILITY,
       CapabilityApi.FILTER_REACHABLE).await().getCapability().getNodes();
     handleCapableNodes(capableNodes);
@@ -74,6 +78,7 @@ public class WearCommunicationModule extends ReactContextBaseJavaModule
     }
   }
 
+  /** Tries to launch the wear app. */
   @ReactMethod
   public void launchWearApp() {
     final List<Node> connectedNodes = Wearable.NodeApi.getConnectedNodes(googleApiClient).await().getNodes();

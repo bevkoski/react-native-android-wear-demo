@@ -30,7 +30,7 @@ public class MainActivity extends WearableActivity
 
   /**
    * Button used to increase counter on the mobile module. The status of this button is handled by the result of {@link
-   * MainActivity#initNodesTask}.
+   * MainActivity.InitNodesTask}.
    */
   private Button btnIncreaseCounter;
   private TextView tvMessage;
@@ -67,7 +67,7 @@ public class MainActivity extends WearableActivity
   public void onConnected(@Nullable Bundle bundle) {
     Log.d(LOG_TAG, "onConnected: GoogleApiClient successfully connected.");
     Wearable.MessageApi.addListener(client, this);
-    initNodesTask.execute(client);
+    new InitNodesTask().execute(client);
   }
 
   /**
@@ -75,8 +75,7 @@ public class MainActivity extends WearableActivity
    * only to that node. Additionally it will enable/disable the {@link MainActivity#btnIncreaseCounter} based on the
    * result.
    */
-  private final AsyncTask<GoogleApiClient, Void, String> initNodesTask
-    = new AsyncTask<GoogleApiClient, Void, String>() {
+  private class InitNodesTask extends AsyncTask<GoogleApiClient, Void, String> {
     @Override
     protected String doInBackground(GoogleApiClient... params) {
       final List<Node> connectedNodes = Wearable.NodeApi.getConnectedNodes(client).await().getNodes();
@@ -89,17 +88,18 @@ public class MainActivity extends WearableActivity
     }
 
     @Override
+    /** Because this runs on the main thread it is safe to change the state of the UI.*/
     protected void onPostExecute(String resultNode) {
       super.onPostExecute(resultNode);
       node = resultNode;
       btnIncreaseCounter.setEnabled(resultNode != null);
     }
-  };
+  }
 
   @Override
   public void onMessageReceived(MessageEvent messageEvent) {
     if (messageEvent.getPath().equals("/increase_wear_counter")) {
-      tvMessage.setText(Integer.toString(count++));
+      tvMessage.setText(Integer.toString(++count));
     }
   }
 

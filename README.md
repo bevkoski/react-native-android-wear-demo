@@ -2,6 +2,8 @@
 
 Showcase of an established two-way communication between a React Native app and an Android Wear app using the [MessageAPI](https://developers.google.com/android/reference/com/google/android/gms/wearable/MessageApi).
 
+![Demo](/demo.gif)
+
 ## Running from Android Studio
 
 #### Clone the repository

@@ -50,7 +50,62 @@ Try executing `adb reverse tcp:8081 tcp:8081` from the command line and reloadin
 
 ### React Native to Android Wear communication
 
+In the `index.android.js` file, an increase of the counter located on the watch is triggered via a native module.
+
+```javascript
+increaseWearCounter = () => {
+  NativeModules.AndroidWearCommunication.increaseWearCounter();
+};
+```
+
+The native module exposes a `@ReactMethod` named `increaseWearCounter`, in which an `/increase_wear_counter` message is sent to the watch via the [MessageAPI](https://developers.google.com/android/reference/com/google/android/gms/wearable/MessageApi).
+
+```java
+@ReactMethod
+public void increaseWearCounter() {
+  final List<Node> nodes = Wearable.NodeApi.getConnectedNodes(googleApiClient).await().getNodes();
+  if (nodes.size() > 0) {
+    for (Node node : nodes) {
+      Wearable.MessageApi.sendMessage(googleApiClient, node.getId(), "/increase_wear_counter", null);
+    }
+  } else {
+    Toast.makeText(getReactApplicationContext(), "No connected nodes found", Toast.LENGTH_LONG).show();
+  }
+}
+```
+
 ### Android Wear to React Native communication
+
+The native module overrides the `onMessageReceived` method and when an `/increase_phone_counter` message is received, it emits an `increaseCounter` event to the JavaScript thread.
+
+```java
+@Override
+public void onMessageReceived(MessageEvent messageEvent) {
+  if (messageEvent.getPath().equals("/increase_phone_counter")) {
+    sendEvent(getReactApplicationContext(), "increaseCounter", null);
+  }
+}
+
+private void sendEvent(ReactContext reactContext, String eventName, @Nullable WritableMap params) {
+  reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+    .emit(eventName, params);
+}
+```
+
+In the `index.android.js` file, the event is handled via listener.
+
+```javascript
+componentWillMount() {
+  DeviceEventEmitter.addListener(INCREASE_COUNTER_EVENT, this.increaseLocalCounter);
+};
+
+increaseLocalCounter = () => {
+  const currentValue = this.state.counter;
+  this.setState({
+    counter: currentValue + 1
+  });
+};
+```
 
 ## Thanks
 

@@ -2,6 +2,8 @@
 
 Showcase of an established two-way communication between a React Native app and an Android Wear app using the [MessageAPI](https://developers.google.com/android/reference/com/google/android/gms/wearable/MessageApi).
 
+![Demo](/demo.gif)
+
 ## Running from Android Studio
 
 #### Clone the repository
@@ -58,7 +60,7 @@ increaseWearCounter = () => {
 };
 ```
 
-The native module exposes a `@ReactMethod` named `increaseWearCounter`, in which an `/increase_wear_counter` message is sent to the watch via the [MessageAPI](https://developers.google.com/android/reference/com/google/android/gms/wearable/MessageApi).
+The native module exposes a `@ReactMethod` named `increaseWearCounter` which queries the [NodeAPI](https://developers.google.com/android/reference/com/google/android/gms/wearable/NodeApi) in order to get all the nodes connected to the phone. A message with an `/increase_wear_counter` path is then sent to each of the nodes using the [MessageAPI](https://developers.google.com/android/reference/com/google/android/gms/wearable/MessageApi).
 
 ```java
 @ReactMethod
@@ -74,7 +76,7 @@ public void increaseWearCounter() {
 }
 ```
 
-The watch app overrides the `onMessageReceived` method and when an `/increase_wear_counter` message is received, it updates the `tvCounter` TextView.
+The watch app implements the [MessageApi.MessageListener](https://developers.google.com/android/reference/com/google/android/gms/wearable/MessageApi.MessageListener) and overrides the `onMessageReceived` method. When a message with an `/increase_wear_counter` path is received, the counter is incremented and the new value is displayed in the `tvCounter` TextView.
 
 ```java
 @Override
@@ -87,7 +89,7 @@ public void onMessageReceived(MessageEvent messageEvent) {
 
 ### Android Wear to React Native communication
 
-An increase of the counter located on the phone is triggered via the button displayed in the watch app. When tapped, it sends an `/increase_phone_counter` message using the [MessageAPI](https://developers.google.com/android/reference/com/google/android/gms/wearable/MessageApi).
+An increase of the counter located on the phone is triggered via the button displayed in the watch app. When tapped, it sends a message with an `/increase_phone_counter` path using the MessageAPI.
 
 ```
 private final View.OnClickListener clickListener = new View.OnClickListener() {
@@ -99,7 +101,7 @@ private final View.OnClickListener clickListener = new View.OnClickListener() {
 };
 ```
 
-The native module overrides the `onMessageReceived` method and when an `/increase_phone_counter` message is received, it emits an `increaseCounter` event to the JavaScript thread.
+The native module overrides the `onMessageReceived` method and when a message with an `/increase_phone_counter` path is received, it emits an `increaseCounter` event to the JavaScript thread.
 
 ```java
 @Override

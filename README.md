@@ -1,137 +1,84 @@
 # React Native-Android Wear Communication Demo
 
-Showcase of an established two-way communication between a React Native app and an Android Wear app using the [MessageAPI](https://developers.google.com/android/reference/com/google/android/gms/wearable/MessageApi).
+Showcase of how to detect the running state of the counter increment demo apps on both phone an wear device. 
 
-![Demo](/demo.gif)
-
-## Running from Android Studio
-
-#### Clone the repository
-
-`git clone https://github.com/bevkoski/react-native-android-wear-demo.git`
-
-`cd react-native-android-wear-demo`
-
-#### Install dependencies
-
-`yarn` or `npm install`
-
-#### Start the packager
-
-`react-native start`
-
-#### Open the project in Android Studio
-
-1. Start Android Studio
-2. Choose "Open an existing Android Studio project"
-3. Select the `/react-native-android-wear-demo/android` folder
-
-#### Run the mobile app
-
-1. Connect your Android phone via USB
-2. Select the `app` module as a run configuration
-3. Run the `app` module
-4. Select your phone from the available connected devices
-
-If you get one of the following error messages:
-
-*Could not connect to development server.*
-
-*Could not get BatchedBridge, make sure your bundle is packaged properly.*
-
-Try executing `adb reverse tcp:8081 tcp:8081` from the command line and reloading the app.
-
-#### Run the watch app
-
-1. Connect your Android watch via USB
-2. Select the `wear` module as a run configuration
-3. Run the `wear` module
-4. Select your watch from the available connected devices
+If both apps are running, "Increase phone/wear counter" button will be shown. If one of them isn't started, an "Launch phone/wear app" button will be shown. This button will launch the app on the mentioned device.
 
 ## How it works
+Instead of just sending message to the nodes on the network, blindly believing that it will be handled by the node, we are using [CapabilityApi](https://developers.google.com/android/reference/com/google/android/gms/wearable/CapabilityApi) to check if there is a capable connected node that can handle the messages we send.
 
-### React Native to Android Wear communication
+Eventually, if there are no capable nodes, an message is send to connected nodes to launch an app that will handle the event.
 
-In the `index.android.js` file, an increase of the counter located on the watch is triggered via a native module.
-
-```javascript
-increaseWearCounter = () => {
-  NativeModules.AndroidWearCommunication.increaseWearCounter();
-};
-```
-
-The native module exposes a `@ReactMethod` named `increaseWearCounter` which queries the [NodeAPI](https://developers.google.com/android/reference/com/google/android/gms/wearable/NodeApi) in order to get all the nodes connected to the phone. A message with an `/increase_wear_counter` path is then sent to each of the nodes using the [MessageAPI](https://developers.google.com/android/reference/com/google/android/gms/wearable/MessageApi).
-
+### Register a capability on the native module of the React Native app
+To register that the React Native app is capable of handling counter increase messages, it is required to register a local capability with call to 
 ```java
-@ReactMethod
-public void increaseWearCounter() {
-  final List<Node> nodes = Wearable.NodeApi.getConnectedNodes(googleApiClient).await().getNodes();
-  if (nodes.size() > 0) {
-    for (Node node : nodes) {
-      Wearable.MessageApi.sendMessage(googleApiClient, node.getId(), "/increase_wear_counter", null);
-    }
-  } else {
-    Toast.makeText(getReactApplicationContext(), "No connected nodes found", Toast.LENGTH_LONG).show();
-  }
-}
-```
-
-The watch app implements the [MessageApi.MessageListener](https://developers.google.com/android/reference/com/google/android/gms/wearable/MessageApi.MessageListener) and overrides the `onMessageReceived` method. When a message with an `/increase_wear_counter` path is received, the counter is incremented and the new value is displayed in the `tvCounter` TextView.
-
-```java
-@Override
-public void onMessageReceived(MessageEvent messageEvent) {
-  if (messageEvent.getPath().equals("/increase_wear_counter")) {
-    tvCounter.setText(Integer.toString(++count));
-  }
-}
-```
-
-### Android Wear to React Native communication
-
-An increase of the counter located on the phone is triggered via the button displayed in the watch app. When tapped, it sends a message with an `/increase_phone_counter` path using the MessageAPI.
-
-```
-private final View.OnClickListener clickListener = new View.OnClickListener() {
   @Override
-  public void onClick(View v) {
-    // Send a message to the found node to increase its counter
-    Wearable.MessageApi.sendMessage(client, node, "/increase_phone_counter", null);
+  public void onConnected(@Nullable Bundle bundle) {
+    Wearable.CapabilityApi.addLocalCapability(googleApiClient, PHONE_COUNTER_CAPABILITY);
   }
-};
 ```
 
-The native module overrides the `onMessageReceived` method and when a message with an `/increase_phone_counter` path is received, it emits an `increaseCounter` event to the JavaScript thread.
+And when the application is closed, make sure this capability is removed.
+```java
+@Override
+  public void onHostDestroy() {
+    Wearable.CapabilityApi.removeLocalCapability(googleApiClient, PHONE_COUNTER_CAPABILITY);
+    googleApiClient.disconnect();
+  }
+```
+
+### Listening for capability from the React Native app
+Similar to registering a capability, we register a capability listener when the GoogleApiClient is connected, and unregister it once the application is closed.
 
 ```java
 @Override
-public void onMessageReceived(MessageEvent messageEvent) {
-  if (messageEvent.getPath().equals("/increase_phone_counter")) {
-    sendEvent(getReactApplicationContext(), "increaseCounter", null);
+  public void onConnected(@Nullable Bundle bundle) {
+    // Listen for capability changes on the network
+    Wearable.CapabilityApi.addCapabilityListener(googleApiClient, capabilityListener, WEAR_COUNTER_CAPABILITY);
+  }
+```
+
+Now when a capability has been registered or unregister on the network, `onCapabilityChanged(CapabilityInfo)` will be triggered. It can be now handled on the native module, or be delegated to the JS module.
+
+And once the app is closing, unregister it:
+```java
+@Override
+  public void onHostDestroy() {
+    Wearable.CapabilityApi.removeCapabilityListener(googleApiClient, this, WEAR_COUNTER_CAPABILITY);
+    googleApiClient.disconnect();
+  }
+```
+
+### Starting the React Native app from the wear device
+Create service that extends `WearableListenerService` and in the same fashion listen for messages from the MessageApi as in the counter incrementer example, but instead of increasing a counter it starts a new activity.
+```java
+public class LaunchPhoneAppListenerService extends WearableListenerService {
+  @Override
+  public void onMessageReceived(MessageEvent messageEvent) {
+    if (messageEvent.getPath().equals("/launch_phone_app")) {
+      final Intent intent = new Intent(this, MainActivity.class);
+      intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+      startActivity(intent);
+    } else {
+      super.onMessageReceived(messageEvent);
+    }
   }
 }
-
-private void sendEvent(ReactContext reactContext, String eventName, @Nullable WritableMap params) {
-  reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-    .emit(eventName, params);
-}
 ```
 
-In the `index.android.js` file, the event is handled via listener.
-
-```javascript
-componentWillMount() {
-  DeviceEventEmitter.addListener(INCREASE_COUNTER_EVENT, this.increaseLocalCounter);
-};
-
-increaseLocalCounter = () => {
-  const currentValue = this.state.counter;
-  this.setState({
-    counter: currentValue + 1
-  });
-};
+After `LaunchPhoneAppListenerService` is created, it needs to be added in the `AndroidManifest.xml` from the phone app module. It is also required to register it that this service wants to listen to events coming from MessageApi.
+```xml
+<service android:name=".LaunchPhoneAppListenerService">
+  <intent-filter>
+    <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED"/>
+    <data
+      android:host="*"
+      android:scheme="wear"/>
+  </intent-filter>
+</service>
 ```
 
-## Thanks
+### How it is implemented on the wear app
+It is exactly the same as on the phone app, so there is no need for duplication in this readme.
 
-Special thanks to @toteto for the implementation of the watch app and the extensive contribution to the native parts of the mobile app.
+Ideally most of this implementation will be implemented one time in a common module that will be a dependency on the other modules that require such functionality.

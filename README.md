@@ -76,7 +76,7 @@ public void increaseWearCounter() {
 }
 ```
 
-The watch app implements [MessageApi.MessageListener](https://developers.google.com/android/reference/com/google/android/gms/wearable/MessageApi.MessageListener) and overrides the `onMessageReceived` method. When a message with an `/increase_wear_counter` path is received, the counter is incremented and the new value is displayed in the `tvCounter` TextView.
+The watch app implements the [MessageApi.MessageListener](https://developers.google.com/android/reference/com/google/android/gms/wearable/MessageApi.MessageListener) and overrides the `onMessageReceived` method. When a message with an `/increase_wear_counter` path is received, the counter is incremented and the new value is displayed in the `tvCounter` TextView.
 
 ```java
 @Override

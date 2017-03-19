@@ -4,7 +4,7 @@ Showcase of an established two-way communication between a React Native app and 
 
 ![Demo](/demo.gif)
 
-## Running from Android Studio
+## Running it from Android Studio
 
 #### Clone the repository
 

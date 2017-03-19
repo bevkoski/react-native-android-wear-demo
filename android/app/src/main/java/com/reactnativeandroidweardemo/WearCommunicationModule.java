@@ -140,6 +140,7 @@ public class WearCommunicationModule extends ReactContextBaseJavaModule
   public void onHostDestroy() {
     Wearable.MessageApi.removeListener(googleApiClient, this);
     Wearable.CapabilityApi.removeLocalCapability(googleApiClient, PHONE_COUNTER_CAPABILITY);
+    Wearable.CapabilityApi.removeCapabilityListener(googleApiClient, this, WEAR_COUNTER_CAPABILITY);
     googleApiClient.disconnect();
   }
 

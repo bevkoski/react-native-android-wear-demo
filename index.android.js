@@ -12,21 +12,34 @@ import {
 } from 'react-native';
 
 const INCREASE_COUNTER_EVENT = 'increaseCounter';
+const ENABLE_LAUNCH_CONTROLS_EVENT = 'enableWearAppLaunchControls';
+const ENABLE_COUNT_CONTROLS_EVENT = 'enableCountControls';
 
 export default class reactNativeAndroidWearDemo extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      counter: 0
+      counter: 0,
+      showLaunchButton: false,
+      showCountButton: false
     };
   };
 
   componentWillMount() {
+    this.setState({
+      counter: 0,
+      showLaunchButton: false,
+      showCountButton: false
+    });
     DeviceEventEmitter.addListener(INCREASE_COUNTER_EVENT, this.increaseLocalCounter);
+    DeviceEventEmitter.addListener(ENABLE_LAUNCH_CONTROLS_EVENT, this.enableLaunchControls);
+    DeviceEventEmitter.addListener(ENABLE_COUNT_CONTROLS_EVENT, this.enableCountControls);
   };
 
   componentWillUnmount() {
     DeviceEventEmitter.removeListener(INCREASE_COUNTER_EVENT, this.increaseLocalCounter);
+    DeviceEventEmitter.removeListener(ENABLE_LAUNCH_CONTROLS_EVENT, this.enableLaunchControls);
+    DeviceEventEmitter.removeListener(ENABLE_COUNT_CONTROLS_EVENT, this.enableCountControls);
   };
 
   increaseLocalCounter = () => {
@@ -36,21 +49,44 @@ export default class reactNativeAndroidWearDemo extends Component {
     });
   };
 
+  enableLaunchControls = () => {
+    this.setState({
+      showLaunchButton: true,
+      showCountButton: false
+    });
+  };
+
+  enableCountControls = () => {
+    this.setState({
+      showLaunchButton: false,
+      showCountButton: true
+    });
+  };
+
+  launchWearApp = () => {
+    NativeModules.AndroidWearCommunication.launchWearApp();
+  };
+
   increaseWearCounter = () => {
     NativeModules.AndroidWearCommunication.increaseWearCounter();
   };
 
   render() {
+    const launchButton = this.state.showLaunchButton ? <Button
+        title="Launch Wear App"
+        onPress={this.launchWearApp}
+        style={styles.button} /> : null;
+    const countButton = this.state.showCountButton ? <Button
+        title="Increase Wear Counter"
+        onPress={this.increaseWearCounter}
+        style={styles.button} /> : null;
     return (
       <View style={styles.container}>
         <Text>Counter on phone:</Text>
         <Text style={styles.counter}>{this.state.counter}</Text>
         <View style={styles.buttonContainer}>
-          <Button
-            title="Increase Wear Counter"
-            onPress={this.increaseWearCounter}
-            style={styles.button}
-          />
+          {launchButton}
+          {countButton}
         </View>
       </View>
     );

@@ -71,7 +71,7 @@ public class WearCommunicationModule extends ReactContextBaseJavaModule
   private class InitNodesTask extends AsyncTask<GoogleApiClient, Void, CapabilityInfo> {
     @Override
     protected CapabilityInfo doInBackground(GoogleApiClient... params) {
-      return Wearable.CapabilityApi.getCapability(params[0], PHONE_COUNTER_CAPABILITY, CapabilityApi.FILTER_REACHABLE)
+      return Wearable.CapabilityApi.getCapability(params[0], WEAR_COUNTER_CAPABILITY, CapabilityApi.FILTER_REACHABLE)
         .await()
         .getCapability();
     }

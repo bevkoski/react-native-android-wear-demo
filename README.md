@@ -1,56 +1,58 @@
 # React Native-Android Wear Communication Demo
 
-Showcase of how to detect the running state of the counter increment demo apps on both phone an wear device. 
+Showcase of a two-way detection of running state between a React Native app and an Android Wear app using the [CapabilityApi](https://developers.google.com/android/reference/com/google/android/gms/wearable/CapabilityApi).
 
-If both apps are running, "Increase phone/wear counter" button will be shown. If one of them isn't started, an "Launch phone/wear app" button will be shown. This button will launch the app on the mentioned device.
+When both apps are running, "Increase phone/wear counter" button is  shown. When one of them isn't started, a "Launch phone/wear app" button is shown. This button launches the app on the mentioned device.
 
 ## How it works
-Instead of just sending message to the nodes on the network, blindly believing that it will be handled by the node, we are using [CapabilityApi](https://developers.google.com/android/reference/com/google/android/gms/wearable/CapabilityApi) to check if there is a capable connected node that can handle the messages we send.
+Instead of just sending a message to the nodes in the network, blindly believing that it will be handled by some node, we are using the [CapabilityApi](https://developers.google.com/android/reference/com/google/android/gms/wearable/CapabilityApi) to check if there is a capable node that can handle the message we send.
 
-Eventually, if there are no capable nodes, an message is send to connected nodes to launch an app that will handle the event.
+When there are no capable nodes, a message is sent to the connected nodes in order to launch an app that will handle future messages.
 
-### Register a capability on the native module of the React Native app
-To register that the React Native app is capable of handling counter increase messages, it is required to register a local capability with call to 
-```java
-  @Override
-  public void onConnected(@Nullable Bundle bundle) {
-    Wearable.CapabilityApi.addLocalCapability(googleApiClient, PHONE_COUNTER_CAPABILITY);
-  }
-```
-
-And when the application is closed, make sure this capability is removed.
-```java
-@Override
-  public void onHostDestroy() {
-    Wearable.CapabilityApi.removeLocalCapability(googleApiClient, PHONE_COUNTER_CAPABILITY);
-    googleApiClient.disconnect();
-  }
-```
-
-### Listening for capability from the React Native app
-Similar to registering a capability, we register a capability listener when the GoogleApiClient is connected, and unregister it once the application is closed.
+#### Registering capability in the native module of the React Native app
+In order to register that the React Native app is capable of handling counter increase messages, the [CapabilityApi.addLocalCapability](https://developers.google.com/android/reference/com/google/android/gms/wearable/CapabilityApi.html#addLocalCapability) method is invoked.
 
 ```java
 @Override
-  public void onConnected(@Nullable Bundle bundle) {
-    // Listen for capability changes on the network
-    Wearable.CapabilityApi.addCapabilityListener(googleApiClient, capabilityListener, WEAR_COUNTER_CAPABILITY);
-  }
+public void onConnected(@Nullable Bundle bundle) {
+  Wearable.CapabilityApi.addLocalCapability(googleApiClient, PHONE_COUNTER_CAPABILITY);
+}
 ```
 
-Now when a capability has been registered or unregister on the network, `onCapabilityChanged(CapabilityInfo)` will be triggered. It can be now handled on the native module, or be delegated to the JS module.
+When the application is closed, we make sure that this capability is removed.
 
-And once the app is closing, unregister it:
 ```java
 @Override
-  public void onHostDestroy() {
-    Wearable.CapabilityApi.removeCapabilityListener(googleApiClient, this, WEAR_COUNTER_CAPABILITY);
-    googleApiClient.disconnect();
-  }
+public void onHostDestroy() {
+  Wearable.CapabilityApi.removeLocalCapability(googleApiClient, PHONE_COUNTER_CAPABILITY);
+  googleApiClient.disconnect();
+}
 ```
 
-### Starting the React Native app from the wear device
-Create service that extends `WearableListenerService` and in the same fashion listen for messages from the MessageApi as in the counter incrementer example, but instead of increasing a counter it starts a new activity.
+#### Listening for capability from the React Native app
+Similar to registering capability, we register a listener when the `GoogleApiClient` is connected, and unregister it once the application is closed.
+
+```java
+@Override
+public void onConnected(@Nullable Bundle bundle) {
+  // Listen for capability changes on the network
+  Wearable.CapabilityApi.addCapabilityListener(googleApiClient, capabilityListener, WEAR_COUNTER_CAPABILITY);
+}
+```
+
+When capability has been registered or unregistered in the network, `onCapabilityChanged(CapabilityInfo)` will be triggered. It can then be handled from the native module or delegated to the JavaScript thread.
+
+Before the app is closed, we unregister it via `removeCapabilityListener`.
+```java
+@Override
+public void onHostDestroy() {
+  Wearable.CapabilityApi.removeCapabilityListener(googleApiClient, this, WEAR_COUNTER_CAPABILITY);
+  googleApiClient.disconnect();
+}
+```
+
+#### Starting the React Native app from the wearable device
+We create a service that extends `WearableListenerService` and in the same fashion listen for messages from the MessageApi. Instead of increasing the counter, a new activity is started.
 ```java
 public class LaunchPhoneAppListenerService extends WearableListenerService {
   @Override
@@ -66,7 +68,7 @@ public class LaunchPhoneAppListenerService extends WearableListenerService {
 }
 ```
 
-After `LaunchPhoneAppListenerService` is created, it needs to be added in the `AndroidManifest.xml` from the phone app module. It is also required to register it that this service wants to listen to events coming from MessageApi.
+The `LaunchPhoneAppListenerService` needs to be registered in the `AndroidManifest.xml` of the phone app module. It is also required to declare that this service will listen to events coming from the MessageApi.
 ```xml
 <service android:name=".LaunchPhoneAppListenerService">
   <intent-filter>
@@ -78,7 +80,5 @@ After `LaunchPhoneAppListenerService` is created, it needs to be added in the `A
 </service>
 ```
 
-### How it is implemented on the wear app
-It is exactly the same as on the phone app, so there is no need for duplication in this readme.
-
-Ideally most of this implementation will be implemented one time in a common module that will be a dependency on the other modules that require such functionality.
+#### How is it implemented in the wear app
+It is implemented exactly the same as in the phone app. Ideally, most of this implementation would be implemented in a common module that would be a dependency of all the other modules that require such functionality.

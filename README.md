@@ -91,7 +91,7 @@ public void onMessageReceived(MessageEvent messageEvent) {
 
 An increase of the counter located on the phone is triggered via the button displayed in the watch app. When tapped, it sends a message with an `/increase_phone_counter` path using the MessageAPI.
 
-```
+```java
 private final View.OnClickListener clickListener = new View.OnClickListener() {
   @Override
   public void onClick(View v) {
